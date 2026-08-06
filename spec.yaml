@@ -45,7 +45,7 @@ commands:
     - command: "pip install --break-system-packages 'uv>=0.11.6'"
       user: "0"
       description: "Install uv (used to install the OpenHands CLI on Python 3.12)"
-    - command: ["sh", "-c", "uv tool install openhands --python 3.12"]
+    - command: "uv tool install openhands --python 3.12"
       user: "1000"
       description: "Install the OpenHands V1 CLI (bin: openhands) into ~/.local/bin"
 
