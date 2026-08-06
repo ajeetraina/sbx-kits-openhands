@@ -1,0 +1,65 @@
+schemaVersion: "1"
+kind: mixin
+name: openhands
+displayName: OpenHands CLI (OpenAI)
+description: "Installs the OpenHands V1 coding-agent CLI (openhands) into a sandbox and wires it to OpenAI via LiteLLM. The kit holds no key: store it once with `sbx secret set-custom --host api.openai.com --env LLM_API_KEY --value \"$OPENAI_API_KEY\"` and the sbx proxy injects it as a Bearer token on requests to api.openai.com. Run it in-sandbox with `openhands --override-with-envs`."
+sourceURL: https://github.com/ajeetraina/sbx-kits-openhands
+
+network:
+  allowedDomains:
+    - pypi.org                        # uv + its dependencies
+    - files.pythonhosted.org
+    - github.com                      # uv-managed CPython 3.12 (python-build-standalone)
+    - objects.githubusercontent.com
+    - release-assets.githubusercontent.com
+    - astral.sh                       # uv metadata
+    - api.openai.com                  # OpenAI, reached by OpenHands via LiteLLM
+  # OpenHands sends the LLM key to OpenAI as `Authorization: Bearer <LLM_API_KEY>`.
+  # The proxy overwrites that header with the real key stored via
+  # `sbx secret set-custom` (keyed on api.openai.com). `llm` is a local label.
+  serviceDomains:
+    api.openai.com: llm
+  serviceAuth:
+    llm:
+      headerName: Authorization
+      valueFormat: "Bearer %s"
+
+environment:
+  variables:
+    PATH: "/home/agent/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    # LiteLLM-style model string; swap for any OpenAI chat model you have access to.
+    LLM_MODEL: "openai/gpt-4o"
+    # Placeholder so LiteLLM has a non-empty key to send; the proxy swaps it on
+    # the wire for api.openai.com. Real key: `sbx secret set-custom --env LLM_API_KEY`.
+    LLM_API_KEY: "placeholder"
+    OPENHANDS_SUPPRESS_BANNER: "1"
+    NO_PROXY: "localhost,127.0.0.1,host.docker.internal"
+    no_proxy: "localhost,127.0.0.1,host.docker.internal"
+
+commands:
+  install:
+    - command: "pip install --break-system-packages 'uv>=0.11.6'"
+      user: "0"
+      description: "Install uv (used to install the OpenHands CLI on Python 3.12)"
+    - command: ["sh", "-c", "uv tool install openhands --python 3.12"]
+      user: "1000"
+      description: "Install the OpenHands V1 CLI (bin: openhands) into ~/.local/bin"
+
+memory: |
+  ## OpenHands coding-agent CLI (OpenAI)
+
+  The OpenHands V1 CLI is installed on PATH as `openhands` (via `uv tool
+  install openhands`) and wired to OpenAI through LiteLLM. The model is set in
+  `LLM_MODEL` (default `openai/gpt-4o`).
+
+  OpenHands ignores the `LLM_*` environment variables unless you pass
+  `--override-with-envs`, so run it as:
+
+      openhands --override-with-envs                       # interactive TUI
+      openhands --headless --override-with-envs --exit-without-confirmation -t "…"
+
+  No key lives in the sandbox: `LLM_API_KEY` is a placeholder, and the sbx
+  proxy overwrites the `Authorization: Bearer …` header with the real OpenAI
+  key (stored via `sbx secret set-custom --host api.openai.com --env
+  LLM_API_KEY`) on outbound requests to api.openai.com. A one-shot smoke test
+  lives at `~/runbooks/smoke.sh`.
