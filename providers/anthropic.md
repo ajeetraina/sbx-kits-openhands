@@ -48,12 +48,13 @@ sbx run --kit ./kits/anthropic claude
 
 - Installs `uv` (pip) and then the OpenHands V1 CLI (`uv tool install openhands
   --python 3.12`) onto `~/.local/bin`, which the kit adds to `PATH`.
-- `network.allowedDomains` includes `api.anthropic.com` plus the install hosts
-  (pypi, GitHub for the uv-managed Python).
-- `api.anthropic.com` is a built-in sbx service, so the proxy attaches the real
-  key (stored via `sbx secret set anthropic`) as `x-api-key` on the wire while
-  `LLM_API_KEY` in the sandbox stays a placeholder — no per-kit `serviceAuth`
-  needed.
+- `permissions.network.allow` includes `api.anthropic.com` plus the install
+  hosts (pypi, GitHub for the uv-managed Python).
+- `api.anthropic.com` is a built-in sbx service. The kit's `credentials` block
+  declares an `anthropic` service key injected as `x-api-key` on requests to
+  that domain; the proxy attaches the real key (stored via
+  `sbx secret set anthropic`) on the wire while `LLM_API_KEY` in the sandbox
+  stays a placeholder.
 
 ## Verify (inside the sandbox)
 

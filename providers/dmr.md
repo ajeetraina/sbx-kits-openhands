@@ -37,8 +37,8 @@ No `sbx secret` step — DMR needs no key.
 
 - Installs `uv` (pip) and then the OpenHands V1 CLI (`uv tool install openhands
   --python 3.12`) onto `~/.local/bin`, which the kit adds to `PATH`.
-- `network.allowedDomains` includes `host.docker.internal:12434` (DMR) plus the
-  install hosts. No cloud LLM host, no proxy-injected credential.
+- `permissions.network.allow` includes `host.docker.internal:12434` (DMR) plus
+  the install hosts. No cloud LLM host, no proxy-injected credential.
 - `LLM_BASE_URL` points at `http://host.docker.internal:12434/engines/v1`,
   `LLM_API_KEY=dmr` (DMR ignores it), and `LLM_MODEL` uses LiteLLM's `openai/`
   provider so the OpenAI-compatible endpoint is used.

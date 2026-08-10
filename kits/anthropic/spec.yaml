@@ -1,25 +1,39 @@
-schemaVersion: "1"
+schemaVersion: "2"
 kind: mixin
 name: openhands
 displayName: OpenHands CLI (Anthropic / Claude)
 description: "Installs the OpenHands V1 coding-agent CLI (openhands) into a sandbox and wires it to Anthropic Claude via LiteLLM. The kit holds no key: Anthropic is a built-in sbx service, so store your key once with `sbx secret set anthropic` and the proxy injects it as the x-api-key header on requests to api.anthropic.com. Run it in-sandbox with `openhands --override-with-envs`."
 sourceURL: https://github.com/ajeetraina/sbx-kits-openhands
 
-network:
-  allowedDomains:
-    - pypi.org                        # uv + its dependencies
-    - files.pythonhosted.org
-    - github.com                      # uv-managed CPython 3.12 (python-build-standalone)
-    - objects.githubusercontent.com
-    - release-assets.githubusercontent.com
-    - astral.sh                       # uv metadata
-    - api.anthropic.com               # Claude, reached by OpenHands via LiteLLM
-  # api.anthropic.com is a BUILT-IN sbx service. Store your key once with
-  # `sbx secret set anthropic` and the proxy injects it as `x-api-key` on
-  # requests to api.anthropic.com — no per-kit custom secret needed. OpenHands
-  # sends `x-api-key: <LLM_API_KEY>`; the proxy overwrites that header with the
-  # real key on the wire, so LLM_API_KEY below stays a placeholder and never
-  # holds a real secret.
+permissions:
+  network:
+    allow:
+      - pypi.org                        # uv + its dependencies
+      - files.pythonhosted.org
+      - github.com                      # uv-managed CPython 3.12 (python-build-standalone)
+      - objects.githubusercontent.com
+      - release-assets.githubusercontent.com
+      - astral.sh                       # uv metadata
+      - api.anthropic.com               # Claude, reached by OpenHands via LiteLLM
+
+# api.anthropic.com is a BUILT-IN sbx service. Store your key once with
+# `sbx secret set anthropic` and the proxy injects it as `x-api-key` on
+# requests to api.anthropic.com — no per-kit custom secret needed. v2 requires
+# this injection to be declared explicitly (it is no longer inferred from the
+# allow-list), hence the credentials block below. OpenHands sends
+# `x-api-key: <LLM_API_KEY>`; the proxy overwrites that header with the real
+# key on the wire, so LLM_API_KEY stays a placeholder and never holds a real
+# secret.
+credentials:
+  - service: anthropic
+    description: "Anthropic API key for OpenHands (via LiteLLM)"
+    apiKey:
+      name: LLM_API_KEY
+      proxyManaged: true
+      inject:
+        - domain: api.anthropic.com
+          header: x-api-key
+          format: "%s"
 
 environment:
   variables:
@@ -35,7 +49,7 @@ environment:
     NO_PROXY: "localhost,127.0.0.1,host.docker.internal"
     no_proxy: "localhost,127.0.0.1,host.docker.internal"
 
-commands:
+setup:
   install:
     - command: "pip install --break-system-packages 'uv>=0.11.6'"
       user: "0"
@@ -44,23 +58,24 @@ commands:
       user: "1000"
       description: "Install the OpenHands V1 CLI (bin: openhands) into ~/.local/bin"
 
-memory: |
-  ## OpenHands coding-agent CLI (Anthropic / Claude)
+agentInstructions:
+  content: |
+    ## OpenHands coding-agent CLI (Anthropic / Claude)
 
-  The OpenHands V1 CLI is installed on PATH as `openhands` (via `uv tool
-  install openhands`) and wired to Anthropic Claude through LiteLLM. The model
-  is set in `LLM_MODEL` (default `anthropic/claude-opus-4-8`).
+    The OpenHands V1 CLI is installed on PATH as `openhands` (via `uv tool
+    install openhands`) and wired to Anthropic Claude through LiteLLM. The model
+    is set in `LLM_MODEL` (default `anthropic/claude-opus-4-8`).
 
-  OpenHands ignores the `LLM_*` environment variables unless you pass
-  `--override-with-envs`, so run it as:
+    OpenHands ignores the `LLM_*` environment variables unless you pass
+    `--override-with-envs`, so run it as:
 
-      openhands --override-with-envs                       # interactive TUI
-      openhands --headless --override-with-envs --exit-without-confirmation -t "…"
+        openhands --override-with-envs                       # interactive TUI
+        openhands --headless --override-with-envs --exit-without-confirmation -t "…"
 
-  No key lives in the sandbox: `LLM_API_KEY` is a placeholder, and the sbx
-  proxy overwrites the `x-api-key` header with the real Anthropic key on
-  outbound requests to api.anthropic.com. Anthropic is a built-in sbx service,
-  so store the key once on the host with `sbx secret set anthropic` — no
-  per-kit custom secret needed. If OpenHands reports an auth error, confirm the
-  secret is stored (`sbx secret ls`). A one-shot smoke test lives at
-  `~/runbooks/smoke.sh`.
+    No key lives in the sandbox: `LLM_API_KEY` is a placeholder, and the sbx
+    proxy overwrites the `x-api-key` header with the real Anthropic key on
+    outbound requests to api.anthropic.com. Anthropic is a built-in sbx service,
+    so store the key once on the host with `sbx secret set anthropic` — no
+    per-kit custom secret needed. If OpenHands reports an auth error, confirm the
+    secret is stored (`sbx secret ls`). A one-shot smoke test lives at
+    `~/runbooks/smoke.sh`.
