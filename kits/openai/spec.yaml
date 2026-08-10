@@ -2,7 +2,7 @@ schemaVersion: "1"
 kind: mixin
 name: openhands
 displayName: OpenHands CLI (OpenAI)
-description: "Installs the OpenHands V1 coding-agent CLI (openhands) into a sandbox and wires it to OpenAI via LiteLLM. The kit holds no key: store it once with `sbx secret set-custom --host api.openai.com --env LLM_API_KEY --value \"$OPENAI_API_KEY\"` and the sbx proxy injects it as a Bearer token on requests to api.openai.com. Run it in-sandbox with `openhands --override-with-envs`."
+description: "Installs the OpenHands V1 coding-agent CLI (openhands) into a sandbox and wires it to OpenAI via LiteLLM. The kit holds no key: OpenAI is a built-in sbx service, so store your key once with `sbx secret set openai` and the proxy injects it as a Bearer token on requests to api.openai.com. Run it in-sandbox with `openhands --override-with-envs`."
 sourceURL: https://github.com/ajeetraina/sbx-kits-openhands
 
 network:
@@ -14,15 +14,12 @@ network:
     - release-assets.githubusercontent.com
     - astral.sh                       # uv metadata
     - api.openai.com                  # OpenAI, reached by OpenHands via LiteLLM
-  # OpenHands sends the LLM key to OpenAI as `Authorization: Bearer <LLM_API_KEY>`.
-  # The proxy overwrites that header with the real key stored via
-  # `sbx secret set-custom` (keyed on api.openai.com). `llm` is a local label.
-  serviceDomains:
-    api.openai.com: llm
-  serviceAuth:
-    llm:
-      headerName: Authorization
-      valueFormat: "Bearer %s"
+  # api.openai.com is a BUILT-IN sbx service. Store your key once with
+  # `sbx secret set openai` (or `sbx secret set openai --oauth`) and the proxy
+  # injects `Authorization: Bearer <key>` on requests to api.openai.com — no
+  # per-kit custom secret needed. OpenHands sends `Authorization: Bearer
+  # <LLM_API_KEY>`; the proxy overwrites that header with the real key on the
+  # wire, so LLM_API_KEY below stays a placeholder and never holds a real secret.
 
 environment:
   variables:
@@ -30,7 +27,7 @@ environment:
     # LiteLLM-style model string; swap for any OpenAI chat model you have access to.
     LLM_MODEL: "openai/gpt-4o"
     # Placeholder so LiteLLM has a non-empty key to send; the proxy swaps it on
-    # the wire for api.openai.com. Real key: `sbx secret set-custom --env LLM_API_KEY`.
+    # the wire for api.openai.com. Real key: `sbx secret set openai`.
     LLM_API_KEY: "placeholder"
     OPENHANDS_SUPPRESS_BANNER: "1"
     NO_PROXY: "localhost,127.0.0.1,host.docker.internal"
@@ -60,6 +57,7 @@ memory: |
 
   No key lives in the sandbox: `LLM_API_KEY` is a placeholder, and the sbx
   proxy overwrites the `Authorization: Bearer …` header with the real OpenAI
-  key (stored via `sbx secret set-custom --host api.openai.com --env
-  LLM_API_KEY`) on outbound requests to api.openai.com. A one-shot smoke test
-  lives at `~/runbooks/smoke.sh`.
+  key on outbound requests to api.openai.com. OpenAI is a built-in sbx service,
+  so store the key once on the host with `sbx secret set openai` (or
+  `sbx secret set openai --oauth`) — no per-kit custom secret needed. A one-shot
+  smoke test lives at `~/runbooks/smoke.sh`.

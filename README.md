@@ -18,7 +18,7 @@ See [providers/](./providers/) for copy-paste config.
 sbx login
 
 # 2. Store your Anthropic key on the host (once) — it never enters the sandbox
-sbx secret set-custom --host api.anthropic.com --env LLM_API_KEY --value "$ANTHROPIC_API_KEY"
+echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
 
 # 3. Launch the kit — run from a repo clone, NOT your home directory
 git clone https://github.com/ajeetraina/sbx-kits-openhands.git
@@ -76,20 +76,24 @@ sbx login
 
 ### 2. Store the key with sbx (never on the command line)
 
-The key is never baked into the kit; you store it once on the host with
-`sbx secret set-custom` (custom because the LLM host is not a built-in sbx
-service), keyed on the provider host and the `LLM_API_KEY` env var. The sbx
-proxy then swaps the placeholder for the real key on outbound requests, so it
-never enters the sandbox. Secrets are global by default:
+The key is never baked into the kit; you store it once on the host. Both
+`anthropic` and `openai` are built-in sbx services, so a plain
+`sbx secret set <service>` is all you need — the proxy injects the stored key on
+outbound requests (as `x-api-key` for Anthropic, `Authorization: Bearer` for
+OpenAI), so it never enters the sandbox. Secrets are global by default:
 
 ```console
 # Anthropic
-sbx secret set-custom --host api.anthropic.com --env LLM_API_KEY --value "$ANTHROPIC_API_KEY"
+echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
 # OpenAI
-sbx secret set-custom --host api.openai.com --env LLM_API_KEY --value "$OPENAI_API_KEY"
+echo "$OPENAI_API_KEY" | sbx secret set openai
 
 sbx secret ls   # confirm the secret is stored
 ```
+
+(Omit the pipe to be prompted for the value instead of passing it via a
+variable. `LLM_API_KEY` in the sandbox stays a placeholder — the real key lives
+only on the host.)
 
 **Self-managed sbx? Allow egress once.** If you are *not* under centralized AI
 governance, permit the kit's hosts so sandbox requests are not denied by the
@@ -247,9 +251,9 @@ sbx policy allow network "api.anthropic.com,pypi.org,files.pythonhosted.org,gith
 Under org-managed governance a local allow cannot widen egress — an admin must
 add the allow. `sbx policy log <sandbox>` names the exact blocked host.
 
-**`401`/authentication error from the LLM:** confirm the secret is stored
-(`sbx secret ls`) and keyed on the right host (`api.anthropic.com` for Anthropic,
-`api.openai.com` for OpenAI) with `--env LLM_API_KEY`.
+**`401`/authentication error from the LLM:** confirm the secret is stored for
+the right service (`sbx secret ls` — `anthropic` for Anthropic, `openai` for
+OpenAI).
 
 **DMR: OpenHands can't reach the model:** confirm Docker Model Runner is running
 on the host (`docker model ls`) and that the model named in `LLM_MODEL` is
