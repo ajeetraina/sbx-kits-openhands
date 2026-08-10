@@ -3,8 +3,8 @@
 Runnable demos shipped with the OpenHands kit. They live at `~/runbooks/` in the
 sandbox and use the `openhands` CLI plus the `LLM_*` environment the kit sets up.
 For cloud providers the credential in the sandbox is always a placeholder (stored
-on the host with `sbx secret set-custom`) — the sbx proxy overwrites the auth
-header with the real key on the wire.
+on the host with `sbx secret set anthropic` / `sbx secret set openai`) — the sbx
+proxy overwrites the auth header with the real key on the wire.
 
 ## smoke.sh
 

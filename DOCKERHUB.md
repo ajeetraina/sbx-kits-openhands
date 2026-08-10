@@ -13,8 +13,8 @@ Source and full docs: https://github.com/ajeetraina/sbx-kits-openhands
 
 | Tag | `LLM_MODEL` | LLM | Credential |
 |-----|-------------|-----|------------|
-| `latest`, `anthropic` | `anthropic/claude-opus-4-8` | Anthropic (`api.anthropic.com`) | API key via `sbx secret set-custom` |
-| `openai` | `openai/gpt-4o` | OpenAI (`api.openai.com`) | API key via `sbx secret set-custom` |
+| `latest`, `anthropic` | `anthropic/claude-opus-4-8` | Anthropic (`api.anthropic.com`) | API key via `sbx secret set anthropic` |
+| `openai` | `openai/gpt-4o` | OpenAI (`api.openai.com`) | API key via `sbx secret set openai` |
 | `dmr` | `openai/ai/qwen2.5-coder` | local Docker Model Runner | none |
 
 `anthropic` is the default because Claude is Anthropic's recommended model for
@@ -23,15 +23,15 @@ Docker Model Runner model with no cloud key.
 
 ## Quick start
 
-Anthropic default. Store an API key once (keyed on the Anthropic host), then
-launch:
+Anthropic default. `anthropic` is a built-in sbx service — store an API key
+once, then launch:
 
-    sbx secret set-custom --host api.anthropic.com --env LLM_API_KEY --value "$ANTHROPIC_API_KEY"
+    echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
     sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:latest claude
 
 OpenAI:
 
-    sbx secret set-custom --host api.openai.com --env LLM_API_KEY --value "$OPENAI_API_KEY"
+    echo "$OPENAI_API_KEY" | sbx secret set openai
     sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:openai claude
 
 Local Docker Model Runner (pull a model on the host first):

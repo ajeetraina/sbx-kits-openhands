@@ -9,7 +9,7 @@ the sandbox.
 | CLI | `openhands` (OpenHands V1, installed via `uv tool install openhands`) |
 | LLM | OpenAI (`api.openai.com`) |
 | `LLM_MODEL` | `openai/gpt-4o` (swap for any OpenAI chat model you have access to) |
-| Credential | OpenAI API key via `sbx secret set-custom` |
+| Credential | OpenAI API key via `sbx secret set openai` |
 
 ## 1. Create an OpenAI API key
 
@@ -18,10 +18,11 @@ key. Copy the `sk-…` value.
 
 ## 2. Store the key as a secret
 
-Keyed on the OpenAI host and the `LLM_API_KEY` env var OpenHands reads:
+`openai` is a built-in sbx service, so a plain `sbx secret set` stores the key —
+no host or env flags needed:
 
 ```bash
-sbx secret set-custom --host api.openai.com --env LLM_API_KEY --value "$OPENAI_API_KEY"
+echo "$OPENAI_API_KEY" | sbx secret set openai   # or omit the pipe to be prompted; `sbx secret set openai --oauth` for OAuth
 sbx secret ls   # confirm the secret is stored
 ```
 
@@ -37,7 +38,7 @@ the sandbox before running.
 ## Run
 
 ```bash
-sbx secret set-custom --host api.openai.com --env LLM_API_KEY --value "$OPENAI_API_KEY"
+echo "$OPENAI_API_KEY" | sbx secret set openai
 sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:openai claude
 # or from a local clone:
 sbx run --kit ./kits/openai claude
@@ -48,9 +49,10 @@ sbx run --kit ./kits/openai claude
 - Installs `uv` (pip) and then the OpenHands V1 CLI (`uv tool install openhands
   --python 3.12`) onto `~/.local/bin`, which the kit adds to `PATH`.
 - `network.allowedDomains` includes `api.openai.com` plus the install hosts.
-- `network.serviceDomains` maps `api.openai.com` to a local `llm` service, and
-  `serviceAuth` sets `Authorization: Bearer %s`, so the proxy attaches the real
-  key on the wire while `LLM_API_KEY` in the sandbox stays a placeholder.
+- `api.openai.com` is a built-in sbx service, so the proxy attaches the real key
+  (stored via `sbx secret set openai`) as `Authorization: Bearer` on the wire
+  while `LLM_API_KEY` in the sandbox stays a placeholder — no per-kit
+  `serviceAuth` needed.
 
 ## Verify (inside the sandbox)
 

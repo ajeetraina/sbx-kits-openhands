@@ -9,7 +9,7 @@ enters the sandbox.
 | CLI | `openhands` (OpenHands V1, installed via `uv tool install openhands`) |
 | LLM | Anthropic Claude (`api.anthropic.com`) |
 | `LLM_MODEL` | `anthropic/claude-opus-4-8` (swap for `anthropic/claude-sonnet-4-6` for a cheaper/faster loop) |
-| Credential | Anthropic API key via `sbx secret set-custom` |
+| Credential | Anthropic API key via `sbx secret set anthropic` |
 
 ## 1. Create an Anthropic API key
 
@@ -18,11 +18,11 @@ key. Copy the `sk-ant-…` value.
 
 ## 2. Store the key as a secret (never baked into the kit)
 
-The LLM host isn't a built-in sbx service, so use `set-custom`, keyed on the
-Anthropic host and the `LLM_API_KEY` env var OpenHands reads:
+`anthropic` is a built-in sbx service, so a plain `sbx secret set` stores the
+key — no host or env flags needed:
 
 ```bash
-sbx secret set-custom --host api.anthropic.com --env LLM_API_KEY --value "$ANTHROPIC_API_KEY"
+echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic   # or omit the pipe to be prompted
 sbx secret ls   # confirm the secret is stored
 ```
 
@@ -38,7 +38,7 @@ edit `LLM_MODEL` in a local clone (`kits/anthropic/spec.yaml`) or
 ## Run
 
 ```bash
-sbx secret set-custom --host api.anthropic.com --env LLM_API_KEY --value "$ANTHROPIC_API_KEY"
+echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
 sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:latest claude   # :latest == :anthropic
 # or from a local clone:
 sbx run --kit ./kits/anthropic claude
@@ -50,9 +50,10 @@ sbx run --kit ./kits/anthropic claude
   --python 3.12`) onto `~/.local/bin`, which the kit adds to `PATH`.
 - `network.allowedDomains` includes `api.anthropic.com` plus the install hosts
   (pypi, GitHub for the uv-managed Python).
-- `network.serviceDomains` maps `api.anthropic.com` to a local `llm` service,
-  and `serviceAuth` sets `x-api-key: %s`, so the proxy attaches the real key on
-  the wire while `LLM_API_KEY` in the sandbox stays a placeholder.
+- `api.anthropic.com` is a built-in sbx service, so the proxy attaches the real
+  key (stored via `sbx secret set anthropic`) as `x-api-key` on the wire while
+  `LLM_API_KEY` in the sandbox stays a placeholder — no per-kit `serviceAuth`
+  needed.
 
 ## Verify (inside the sandbox)
 

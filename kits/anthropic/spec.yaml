@@ -2,7 +2,7 @@ schemaVersion: "1"
 kind: mixin
 name: openhands
 displayName: OpenHands CLI (Anthropic / Claude)
-description: "Installs the OpenHands V1 coding-agent CLI (openhands) into a sandbox and wires it to Anthropic Claude via LiteLLM. The kit holds no key: store it once with `sbx secret set-custom --host api.anthropic.com --env LLM_API_KEY --value \"$ANTHROPIC_API_KEY\"` and the sbx proxy injects it as the x-api-key header on requests to api.anthropic.com. Run it in-sandbox with `openhands --override-with-envs`."
+description: "Installs the OpenHands V1 coding-agent CLI (openhands) into a sandbox and wires it to Anthropic Claude via LiteLLM. The kit holds no key: Anthropic is a built-in sbx service, so store your key once with `sbx secret set anthropic` and the proxy injects it as the x-api-key header on requests to api.anthropic.com. Run it in-sandbox with `openhands --override-with-envs`."
 sourceURL: https://github.com/ajeetraina/sbx-kits-openhands
 
 network:
@@ -14,16 +14,12 @@ network:
     - release-assets.githubusercontent.com
     - astral.sh                       # uv metadata
     - api.anthropic.com               # Claude, reached by OpenHands via LiteLLM
-  # OpenHands sends the LLM key to Anthropic as `x-api-key: <LLM_API_KEY>`.
-  # The proxy overwrites that header with the real key stored via
-  # `sbx secret set-custom` (keyed on api.anthropic.com), so the key never
-  # enters the sandbox. `llm` is just a local service label for this kit.
-  serviceDomains:
-    api.anthropic.com: llm
-  serviceAuth:
-    llm:
-      headerName: x-api-key
-      valueFormat: "%s"
+  # api.anthropic.com is a BUILT-IN sbx service. Store your key once with
+  # `sbx secret set anthropic` and the proxy injects it as `x-api-key` on
+  # requests to api.anthropic.com — no per-kit custom secret needed. OpenHands
+  # sends `x-api-key: <LLM_API_KEY>`; the proxy overwrites that header with the
+  # real key on the wire, so LLM_API_KEY below stays a placeholder and never
+  # holds a real secret.
 
 environment:
   variables:
@@ -33,8 +29,7 @@ environment:
     # swap for anthropic/claude-sonnet-4-6 for a cheaper/faster coding loop.
     LLM_MODEL: "anthropic/claude-opus-4-8"
     # Placeholder so LiteLLM has a non-empty key to send; the proxy swaps it on
-    # the wire for api.anthropic.com. The real key is stored out-of-band with
-    # `sbx secret set-custom --env LLM_API_KEY` (see the README).
+    # the wire for api.anthropic.com. Real key: `sbx secret set anthropic`.
     LLM_API_KEY: "placeholder"
     OPENHANDS_SUPPRESS_BANNER: "1"
     NO_PROXY: "localhost,127.0.0.1,host.docker.internal"
@@ -63,8 +58,9 @@ memory: |
       openhands --headless --override-with-envs --exit-without-confirmation -t "…"
 
   No key lives in the sandbox: `LLM_API_KEY` is a placeholder, and the sbx
-  proxy overwrites the `x-api-key` header with the real Anthropic key (stored
-  via `sbx secret set-custom --host api.anthropic.com --env LLM_API_KEY`) on
-  outbound requests to api.anthropic.com. If OpenHands reports an auth error,
-  confirm the secret is stored (`sbx secret ls`). A one-shot smoke test lives
-  at `~/runbooks/smoke.sh`.
+  proxy overwrites the `x-api-key` header with the real Anthropic key on
+  outbound requests to api.anthropic.com. Anthropic is a built-in sbx service,
+  so store the key once on the host with `sbx secret set anthropic` — no
+  per-kit custom secret needed. If OpenHands reports an auth error, confirm the
+  secret is stored (`sbx secret ls`). A one-shot smoke test lives at
+  `~/runbooks/smoke.sh`.
