@@ -48,11 +48,12 @@ sbx run --kit ./kits/openai claude
 
 - Installs `uv` (pip) and then the OpenHands V1 CLI (`uv tool install openhands
   --python 3.12`) onto `~/.local/bin`, which the kit adds to `PATH`.
-- `network.allowedDomains` includes `api.openai.com` plus the install hosts.
-- `api.openai.com` is a built-in sbx service, so the proxy attaches the real key
-  (stored via `sbx secret set openai`) as `Authorization: Bearer` on the wire
-  while `LLM_API_KEY` in the sandbox stays a placeholder — no per-kit
-  `serviceAuth` needed.
+- `permissions.network.allow` includes `api.openai.com` plus the install hosts.
+- `api.openai.com` is a built-in sbx service. The kit's `credentials` block
+  declares an `openai` service key injected as a Bearer token on requests to
+  that domain; the proxy attaches the real key (stored via
+  `sbx secret set openai`) on the wire while `LLM_API_KEY` in the sandbox
+  stays a placeholder.
 
 ## Verify (inside the sandbox)
 
