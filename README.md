@@ -3,14 +3,14 @@
 A standalone [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) kit
 (`kind: mixin`) that installs [OpenHands](https://github.com/OpenHands/OpenHands)
 **Agent Canvas** — the browser UI + backend server (`agent-canvas`, port 8000)
-that replaced the now-deprecated interactive CLI — plus the still-supported
+that replaced the now-deprecated interactive CLI plus the still-supported
 **headless** `openhands` runner, and wires both to an LLM through
 [LiteLLM](https://github.com/BerriAI/litellm). A one-shot smoke-test runbook and
 a Canvas launcher ship alongside.
 
 > **Why the change?** OpenHands moved its interactive CLI/TUI to maintenance mode
 > in favour of [Agent Canvas](https://docs.openhands.dev/openhands/usage/agent-canvas/overview).
-> The **headless** and ACP modes remain fully supported for automation — this kit
+> The **headless** and ACP modes remain fully supported for automation, this kit
 > keeps them for verification and scripting.
 
 **Anthropic Claude** is the zero-config default. The provider is swappable to
@@ -22,7 +22,7 @@ See [providers/](./providers/) for copy-paste config.
 ![OpenHands sbx kit architecture](./assets/architecture.png)
 
 The kit runs inside an sbx microVM sandbox. Your `LLM_API_KEY` stays
-**proxy-managed** and never enters the sandbox — the **sbx proxy** swaps in the
+**proxy-managed** and never enters the sandbox, the **sbx proxy** swaps in the
 real key at the network boundary, and an egress **allow-list** limits build-time
 traffic (PyPI · npm · Node). The **Agent Canvas** UI is reached from the host
 browser via the `-p 8000` port-forward.
