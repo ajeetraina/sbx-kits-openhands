@@ -1,6 +1,20 @@
 name: Publish Kits
 
 on:
+  # Auto-publish whenever kit content lands on main, so Docker Hub always tracks
+  # the default branch. Path-filtered so unrelated changes (assets, other CI,
+  # LICENSE-only) don't trigger a republish.
+  push:
+    branches: [main]
+    paths:
+      - "spec.yaml"
+      - "kits/**"
+      - "files/**"
+      - "providers/**"
+      - "scripts/push-kits.sh"
+      - "README.md"
+      - "DOCKERHUB.md"
+      - ".github/workflows/push-kits.yaml"
   workflow_dispatch:
     inputs:
       sbx_release:
@@ -22,7 +36,8 @@ jobs:
       - name: Install SBX
         env:
           GH_TOKEN: ${{ github.token }}
-          SBX_RELEASE: ${{ inputs.sbx_release }}
+          # push events have no inputs — fall back to a v2-capable default.
+          SBX_RELEASE: ${{ inputs.sbx_release || 'v0.39.0-rc5' }}
         run: |
           set -euo pipefail
           gh release download "$SBX_RELEASE" \
@@ -63,7 +78,7 @@ jobs:
       - name: Publish kit artifact
         env:
           DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
-          TAG: ${{ inputs.tag }}
+          TAG: ${{ inputs.tag || 'latest' }}
         run: bash ./scripts/push-kits.sh
 
       - name: Sync Docker Hub overview page
