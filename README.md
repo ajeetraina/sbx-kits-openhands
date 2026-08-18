@@ -1,11 +1,17 @@
 # sbx kits for OpenHands
 
 A standalone [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) kit
-(`kind: mixin`) that installs the
-[OpenHands](https://github.com/OpenHands/OpenHands-CLI) V1 coding-agent CLI
-(`openhands`) into any sandbox and wires it to an LLM through
-[LiteLLM](https://github.com/BerriAI/litellm), plus a one-shot smoke-test
-runbook.
+(`kind: mixin`) that installs [OpenHands](https://github.com/OpenHands/OpenHands)
+**Agent Canvas** — the browser UI + backend server (`agent-canvas`, port 8000)
+that replaced the now-deprecated interactive CLI — plus the still-supported
+**headless** `openhands` runner, and wires both to an LLM through
+[LiteLLM](https://github.com/BerriAI/litellm). A one-shot smoke-test runbook and
+a Canvas launcher ship alongside.
+
+> **Why the change?** OpenHands moved its interactive CLI/TUI to maintenance mode
+> in favour of [Agent Canvas](https://docs.openhands.dev/openhands/usage/agent-canvas/overview).
+> The **headless** and ACP modes remain fully supported for automation — this kit
+> keeps them for verification and scripting.
 
 **Anthropic Claude** is the zero-config default. The provider is swappable to
 OpenAI or to a local [Docker Model Runner](https://docs.docker.com/ai/model-runner/).
@@ -20,16 +26,16 @@ sbx login
 # 2. Store your Anthropic key on the host (once) — it never enters the sandbox
 echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
 
-# 3. Launch the kit — run from a repo clone, NOT your home directory
+# 3. Launch the kit — forward port 8000 for Agent Canvas, run from a repo clone
 git clone https://github.com/ajeetraina/sbx-kits-openhands.git
 cd sbx-kits-openhands
-sbx run --kit ./kits/anthropic claude
+sbx run -p 8000 --kit ./kits/anthropic claude
 
-# 4. Inside the sandbox: prove it end-to-end
-bash ~/runbooks/smoke.sh                 # headless one-shot task through OpenHands
+# 4a. Inside the sandbox: start Agent Canvas, then open http://localhost:8000
+bash ~/runbooks/canvas.sh
 
-# 5. Or start an interactive OpenHands session
-openhands --override-with-envs
+# 4b. Or prove it end-to-end without a browser (headless one-shot)
+bash ~/runbooks/smoke.sh
 ```
 
 `env | grep LLM_API_KEY` inside the sandbox shows a placeholder, never your real
@@ -37,25 +43,36 @@ openhands --override-with-envs
 
 ## What the kit does
 
-Layered onto an agent, the mixin does four observable things:
+Layered onto an agent, the mixin does these observable things:
 
-1. Installs `uv` and then the OpenHands V1 CLI (`uv tool install openhands
+1. Installs **Node.js 22** and OpenHands **Agent Canvas** (`npm i -g
+   @openhands/agent-canvas`, bin: `agent-canvas`) — the browser UI + backend
+   server on port 8000.
+2. Installs `uv` and the headless OpenHands runner (`uv tool install openhands
    --python 3.12`) onto `~/.local/bin`, which it adds to `PATH`.
-2. Sets `LLM_MODEL` / `LLM_API_KEY` (/ `LLM_BASE_URL` for the local model
-   runner) so OpenHands knows which model to drive.
-3. For cloud providers, routes LLM traffic through the sbx proxy so the key is
+3. Sets `LLM_MODEL` / `LLM_API_KEY` (/ `LLM_BASE_URL` for the local model
+   runner) so both surfaces know which model to drive.
+4. For cloud providers, routes LLM traffic through the sbx proxy so the key is
    attached on the wire (`x-api-key` for Anthropic, `Authorization: Bearer` for
    OpenAI) and never enters the sandbox.
-4. Ships a `~/runbooks/smoke.sh` end-to-end check and injects a memory note so
-   the sandbox's own agent knows OpenHands is available.
+5. Ships `~/runbooks/canvas.sh` (launches Agent Canvas) and `~/runbooks/smoke.sh`
+   (headless end-to-end check), and injects a memory note so the sandbox's own
+   agent knows OpenHands is available.
 
 **No key lives in the sandbox.** `sbx run` has no `-e` flag: you store the key
 once with sbx's secret manager and the proxy injects it into outbound LLM
 requests, so it never enters the microVM, shell history, or `ps`.
 
-> **OpenHands ignores the `LLM_*` env vars unless you pass `--override-with-envs`.**
-> Always run `openhands --override-with-envs` (the smoke-test runbook does this
-> for you). This is an OpenHands design choice, not a kit limitation.
+> **Agent Canvas needs port 8000 forwarded.** Launch the sandbox with
+> `sbx run -p 8000 …` so the browser UI is reachable at http://localhost:8000.
+> Agent Canvas doesn't read the `LLM_*` env vars, so start it via
+> `~/runbooks/canvas.sh` — that launcher seeds the model into Canvas' settings
+> API after startup, so the UI opens preconfigured and you shouldn't need to
+> touch **Settings > LLM**.
+
+> **The headless runner ignores `LLM_*` unless you pass `--override-with-envs`.**
+> The `smoke.sh` runbook does this for you. This is an OpenHands design choice,
+> not a kit limitation.
 
 ## Prerequisites
 
@@ -101,7 +118,7 @@ network policy (with org-managed governance an admin allows these for you):
 
 ```console
 sbx policy init balanced   # one-time, only if you have never initialized a policy
-sbx policy allow network "api.anthropic.com,pypi.org,files.pythonhosted.org,github.com,objects.githubusercontent.com,release-assets.githubusercontent.com,astral.sh"
+sbx policy allow network "api.anthropic.com,pypi.org,files.pythonhosted.org,github.com,objects.githubusercontent.com,release-assets.githubusercontent.com,astral.sh,nodejs.org,registry.npmjs.org,ghcr.io,pkg-containers.githubusercontent.com"
 ```
 
 `sbx policy log <sandbox>` shows any host that was blocked, so you can allow
@@ -110,36 +127,36 @@ exactly that one.
 ### 3. Launch the sandbox with the kit
 
 Each provider is published as its own image tag — pick the one matching your
-setup.
+setup. Forward port 8000 so Agent Canvas is reachable.
 
 ```console
 # Anthropic / Claude (default, recommended) — :latest == :anthropic
-sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:latest claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest claude
 
 # OpenAI
-sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:openai claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:openai claude
 
 # Local Docker Model Runner (no cloud key)
-sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:dmr claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:dmr claude
 ```
 
 Or straight from this repo over git (uses the default anthropic provider):
 
 ```console
-sbx run --kit "git+https://github.com/ajeetraina/sbx-kits-openhands.git" claude
+sbx run -p 8000 --kit "git+https://github.com/ajeetraina/sbx-kits-openhands.git" claude
 ```
 
 Or from a local clone (the default kit lives at the repo root):
 
 ```console
 git clone https://github.com/ajeetraina/sbx-kits-openhands.git
-sbx run --kit ./sbx-kits-openhands/ claude
+sbx run -p 8000 --kit ./sbx-kits-openhands/ claude
 ```
 
 #### Choosing the agent
 
 The trailing argument (`claude` above) is the **coding agent** that runs the
-sandbox session — a separate axis from the OpenHands CLI the kit installs. The
+sandbox session — a separate axis from OpenHands, which the kit installs. The
 tag decides which LLM OpenHands drives; the trailing agent decides which
 assistant you interact with in the sandbox shell. `sbx run --help` lists them:
 
@@ -150,7 +167,7 @@ claude, claude-bedrock, codex, copilot, cursor, docker-agent, droid, gemini, kir
 `shell` is a good choice if you only want to drive OpenHands directly:
 
 ```console
-sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:latest shell
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest shell
 ```
 
 ### 4. Confirm the kit installed correctly
@@ -158,11 +175,11 @@ sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:latest shell
 Inside the agent session, use `!` shell escapes to prove the mixin is really
 inside.
 
-**4a. The OpenHands CLI is installed:**
+**4a. Both OpenHands surfaces are installed:**
 
 ```console
+!command -v agent-canvas && node --version
 !command -v openhands
-!openhands --help | head -20
 ```
 
 **4b. The mixin's env is present** (a fingerprint that the kit wired things up):
@@ -184,28 +201,36 @@ key, and a live round-trip to the model, so if you only run one check, run this:
 
 ### 5. Use OpenHands
 
-Start an interactive session (remember `--override-with-envs`):
+**Agent Canvas (primary, interactive)** — start the server, then open the UI in
+your browser (port 8000 must be forwarded, see step 3):
 
 ```console
-openhands --override-with-envs
+bash ~/runbooks/canvas.sh          # serves http://localhost:8000
 ```
 
-Or drive it headlessly for scripting / CI:
+Confirm the default local backend shows as **connected**, then start a
+conversation. `canvas.sh` seeds the model (`LLM_MODEL`) into Canvas' settings
+after startup — Agent Canvas itself doesn't read the `LLM_*` env vars — so you
+shouldn't need to configure **Settings > LLM** by hand.
+
+**Headless (automation / CI)** — the still-supported `openhands` runner
+(remember `--override-with-envs`):
 
 ```console
 openhands --headless --override-with-envs --exit-without-confirmation -t "Add tests for utils.py"
 openhands --headless --override-with-envs --exit-without-confirmation -f task.md
 ```
 
-### 6. Try the runbook
+### 6. Try the runbooks
 
-The kit ships a runnable demo under `~/runbooks/`. It is a plain file under
+The kit ships runnable demos under `~/runbooks/`. They are plain files under
 [`files/home/runbooks/`](./files/home/runbooks/) (the
 [sbx-kits-contrib][contrib] `files/home/` convention — everything under it is
 mirrored into `/home/agent/`), **not** hard-coded into `spec.yaml`:
 
 ```console
-!bash ~/runbooks/smoke.sh
+!bash ~/runbooks/canvas.sh         # launch Agent Canvas (port 8000)
+!bash ~/runbooks/smoke.sh          # headless end-to-end check
 !bash ~/runbooks/smoke.sh "write a Python function that reverses a string, with a test"
 ```
 
@@ -231,21 +256,30 @@ Each page has the exact `LLM_MODEL`, run command, and setup notes. Overview:
 the sbx runtime refuses to mount your home directory into the sandbox. Run
 `sbx run` from any directory other than your home directory.
 
-**`openhands: command not found`:** the CLI installs to `~/.local/bin` via `uv
-tool install`. The kit adds that to `PATH`; if a custom shell rc overrode `PATH`,
-run `export PATH=/home/agent/.local/bin:$PATH` or re-check the install step
-(`uv tool list`).
+**Can't reach Agent Canvas at http://localhost:8000:** confirm the sandbox was
+launched with `sbx run -p 8000 …` (the port must be forwarded) and that
+`agent-canvas` is actually running (`~/runbooks/canvas.sh`). Use a different port
+with `PORT=3000 bash ~/runbooks/canvas.sh` and `sbx run -p 3000 …`.
 
-**OpenHands seems to ignore the model / key:** you almost certainly forgot
-`--override-with-envs`. OpenHands ignores the `LLM_*` env vars without it. The
-smoke-test runbook passes it for you.
+**`agent-canvas: command not found`:** the Node.js install or the global npm
+install did not complete. Check `node --version` (must be ≥ 22.12) and re-run
+`npm install -g @openhands/agent-canvas`.
+
+**`openhands: command not found`:** the headless runner installs to
+`~/.local/bin` via `uv tool install`. The kit adds that to `PATH`; if a custom
+shell rc overrode `PATH`, run `export PATH=/home/agent/.local/bin:$PATH` or
+re-check the install step (`uv tool list`).
+
+**OpenHands seems to ignore the model / key** (headless): you almost certainly
+forgot `--override-with-envs`. The headless runner ignores the `LLM_*` env vars
+without it. The smoke-test runbook passes it for you.
 
 **Network policy denied a request** (egress blocked reaching `api.anthropic.com`
 or the install hosts): if you self-manage sbx policy and have no centralized
 governance, allow the kit's hosts once (global scope):
 
 ```console
-sbx policy allow network "api.anthropic.com,pypi.org,files.pythonhosted.org,github.com,objects.githubusercontent.com,release-assets.githubusercontent.com,astral.sh"
+sbx policy allow network "api.anthropic.com,pypi.org,files.pythonhosted.org,github.com,objects.githubusercontent.com,release-assets.githubusercontent.com,astral.sh,nodejs.org,registry.npmjs.org,ghcr.io,pkg-containers.githubusercontent.com"
 ```
 
 Under org-managed governance a local allow cannot widen egress — an admin must

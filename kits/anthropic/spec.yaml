@@ -1,8 +1,8 @@
 schemaVersion: "2"
 kind: mixin
 name: openhands
-displayName: OpenHands CLI (Anthropic / Claude)
-description: "Installs the OpenHands V1 coding-agent CLI (openhands) into a sandbox and wires it to Anthropic Claude via LiteLLM. The kit holds no key: Anthropic is a built-in sbx service, so store your key once with `sbx secret set anthropic` and the proxy injects it as the x-api-key header on requests to api.anthropic.com. Run it in-sandbox with `openhands --override-with-envs`."
+displayName: OpenHands Agent Canvas (Anthropic / Claude)
+description: "Installs OpenHands Agent Canvas — the browser UI + backend server (`agent-canvas`, port 8000) that replaced the deprecated interactive CLI — plus the still-supported headless `openhands` runner, wired to Anthropic Claude via LiteLLM. The kit holds no key: Anthropic is a built-in sbx service, so store your key once with `sbx secret set anthropic` and the proxy injects it as the x-api-key header on requests to api.anthropic.com. Forward port 8000 (`sbx run -p 8000 …`) and open http://localhost:8000, or run the headless smoke test."
 sourceURL: https://github.com/ajeetraina/sbx-kits-openhands
 
 permissions:
@@ -14,6 +14,10 @@ permissions:
       - objects.githubusercontent.com
       - release-assets.githubusercontent.com
       - astral.sh                       # uv metadata
+      - nodejs.org                      # Node.js 22 runtime (static tarball)
+      - registry.npmjs.org              # @openhands/agent-canvas (npm)
+      - ghcr.io                         # Canvas agent-server image/artifacts
+      - pkg-containers.githubusercontent.com   # ghcr blob storage
       - api.anthropic.com               # Claude, reached by OpenHands via LiteLLM
 
 # api.anthropic.com is a BUILT-IN sbx service. Store your key once with
@@ -46,30 +50,53 @@ environment:
     # the wire for api.anthropic.com. Real key: `sbx secret set anthropic`.
     LLM_API_KEY: "placeholder"
     OPENHANDS_SUPPRESS_BANNER: "1"
+    # Encrypts Agent Canvas' stored settings under ~/.openhands. Fixed dev value
+    # so the local, single-user sandbox backend starts without prompting; the
+    # LLM key it protects is only ever the placeholder above.
+    OH_SECRET_KEY: "sbx-openhands-dev"
     NO_PROXY: "localhost,127.0.0.1,host.docker.internal"
     no_proxy: "localhost,127.0.0.1,host.docker.internal"
 
 setup:
   install:
+    - command: 'bash -lc ''set -e; V=$(node --version 2>/dev/null || true); V=${V#v}; MAJ=${V%%.*}; R=${V#*.}; MIN=${R%%.*}; if [ -n "$MAJ" ] && { [ "$MAJ" -gt 22 ] || { [ "$MAJ" -eq 22 ] && [ "$MIN" -ge 12 ]; }; }; then echo "node v$V already present (>=22.12), skipping"; exit 0; fi; A=$(uname -m); case "$A" in x86_64) N=x64;; aarch64|arm64) N=arm64;; *) echo "unsupported arch: $A" >&2; exit 1;; esac; NV=v22.12.0; curl -fsSL "https://nodejs.org/dist/$NV/node-$NV-linux-$N.tar.gz" | tar -xz -C /usr/local --strip-components=1'''
+      user: "0"
+      description: "Ensure Node.js >=22.12 for Agent Canvas (present in sbx base images; else fetch the tar.gz)"
+    - command: 'bash -lc ''i=0; while [ $i -lt 3 ]; do i=$((i+1)); npm install -g --prefix /usr/local @openhands/agent-canvas --no-audit --no-fund --maxsockets 3 --fetch-retries 5 --fetch-retry-maxtimeout 120000 && exit 0; echo "npm attempt $i failed; retrying in 5s" >&2; sleep 5; done; echo "npm install failed after $i attempts" >&2; exit 1'''
+      user: "0"
+      description: "Install OpenHands Agent Canvas (bin: agent-canvas) into /usr/local/bin; retries + low concurrency for the apply-time proxy"
     - command: "pip install --break-system-packages 'uv>=0.11.6'"
       user: "0"
-      description: "Install uv (used to install the OpenHands CLI on Python 3.12)"
+      description: "Install uv (used to install the headless OpenHands runner on Python 3.12)"
     - command: "uv tool install openhands --python 3.12"
       user: "1000"
-      description: "Install the OpenHands V1 CLI (bin: openhands) into ~/.local/bin"
+      description: "Install the headless OpenHands runner (bin: openhands) into ~/.local/bin"
 
 agentInstructions:
   content: |
-    ## OpenHands coding-agent CLI (Anthropic / Claude)
+    ## OpenHands Agent Canvas (Anthropic / Claude)
 
-    The OpenHands V1 CLI is installed on PATH as `openhands` (via `uv tool
-    install openhands`) and wired to Anthropic Claude through LiteLLM. The model
-    is set in `LLM_MODEL` (default `anthropic/claude-opus-4-8`).
+    OpenHands' interactive CLI/TUI is deprecated in favour of **Agent Canvas**, a
+    browser UI + backend server. This kit installs both surfaces, wired to
+    Anthropic Claude through LiteLLM. The model is set in `LLM_MODEL` (default
+    `anthropic/claude-opus-4-8`).
 
-    OpenHands ignores the `LLM_*` environment variables unless you pass
-    `--override-with-envs`, so run it as:
+    **Agent Canvas (primary, interactive)** — installed on PATH as
+    `agent-canvas` (via `npm i -g @openhands/agent-canvas`). Launch it with the
+    runbook, which also seeds the model:
 
-        openhands --override-with-envs                       # interactive TUI
+        bash ~/runbooks/canvas.sh        # serves http://localhost:8000
+
+    Agent Canvas does NOT read the `LLM_*` env vars (its LLM config lives in the
+    web UI). `canvas.sh` works around this: after the backend is healthy it seeds
+    `LLM_MODEL` / `LLM_API_KEY` into Canvas via its local settings API, so the UI
+    opens preconfigured. Port 8000 must be forwarded to the host — start the
+    sandbox with `sbx run -p 8000 …`, then open http://localhost:8000.
+
+    **Headless runner (automation / verification)** — the still-supported
+    `openhands` binary (via `uv tool install openhands`). It ignores the `LLM_*`
+    env vars unless you pass `--override-with-envs`:
+
         openhands --headless --override-with-envs --exit-without-confirmation -t "…"
 
     No key lives in the sandbox: `LLM_API_KEY` is a placeholder, and the sbx

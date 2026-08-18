@@ -1,9 +1,10 @@
 # LLM providers for the OpenHands kit
 
-The kit installs the [OpenHands](https://github.com/OpenHands/OpenHands-CLI) V1
-coding-agent CLI (`openhands`) into a sandbox and points it at an LLM through
-[LiteLLM](https://github.com/BerriAI/litellm). What changes per provider is
-*which model* the agent drives and *how the credential reaches it*.
+The kit installs [OpenHands](https://github.com/OpenHands/OpenHands) **Agent
+Canvas** (`agent-canvas`, the browser UI + backend server on port 8000) plus the
+still-supported headless `openhands` runner into a sandbox, and points both at an
+LLM through [LiteLLM](https://github.com/BerriAI/litellm). What changes per
+provider is *which model* the agent drives and *how the credential reaches it*.
 
 ## Provider matrix
 
@@ -41,21 +42,23 @@ cost-sensitive work — at the cost of using a smaller local model.
 
    `dmr` needs no key — it talks to a local Docker Model Runner.
 
-2. **OpenHands ignores `LLM_*` env vars unless you pass `--override-with-envs`.**
-   The kit sets `LLM_MODEL` / `LLM_API_KEY` (/ `LLM_BASE_URL` for dmr), but you
-   must run `openhands --override-with-envs` for them to take effect. This is an
-   OpenHands design choice, not a kit limitation.
+2. **Two surfaces, one config.** The kit sets `LLM_MODEL` / `LLM_API_KEY` (/
+   `LLM_BASE_URL` for dmr) once. **Agent Canvas** (`bash ~/runbooks/canvas.sh`,
+   http://localhost:8000) picks them up on startup — forward the port with
+   `sbx run -p 8000 …`. The **headless** `openhands` runner needs
+   `--override-with-envs` to honour those same env vars (an OpenHands design
+   choice, not a kit limitation); `~/runbooks/smoke.sh` passes it for you.
 
 ## Switching provider
 
 Each provider is published as an image tag (`:anthropic`, `:openai`, `:dmr`), and
 the same specs live under [`kits/`](../kits). Pick one, store its key if it's a
-cloud provider, and run it:
+cloud provider, and run it with port 8000 forwarded for Agent Canvas:
 
 ```bash
 echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
-sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:anthropic claude
-# or from this repo: sbx run --kit ./kits/anthropic claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:anthropic claude
+# or from this repo: sbx run -p 8000 --kit ./kits/anthropic claude
 ```
 
 See each provider's page for the exact `LLM_MODEL`, run command, and setup notes.
