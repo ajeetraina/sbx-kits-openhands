@@ -56,12 +56,12 @@ environment:
 
 setup:
   install:
-    - command: 'bash -lc ''set -e; A=$(uname -m); case "$A" in x86_64) N=x64;; aarch64|arm64) N=arm64;; *) echo "unsupported arch: $A" >&2; exit 1;; esac; V=v22.12.0; curl -fsSL "https://nodejs.org/dist/$V/node-$V-linux-$N.tar.xz" | tar -xJ -C /usr/local --strip-components=1'''
+    - command: 'bash -lc ''set -e; V=$(node --version 2>/dev/null || true); V=${V#v}; MAJ=${V%%.*}; R=${V#*.}; MIN=${R%%.*}; if [ -n "$MAJ" ] && { [ "$MAJ" -gt 22 ] || { [ "$MAJ" -eq 22 ] && [ "$MIN" -ge 12 ]; }; }; then echo "node v$V already present (>=22.12), skipping"; exit 0; fi; A=$(uname -m); case "$A" in x86_64) N=x64;; aarch64|arm64) N=arm64;; *) echo "unsupported arch: $A" >&2; exit 1;; esac; NV=v22.12.0; curl -fsSL "https://nodejs.org/dist/$NV/node-$NV-linux-$N.tar.gz" | tar -xz -C /usr/local --strip-components=1'''
       user: "0"
-      description: "Install Node.js 22 (static tarball into /usr/local) for Agent Canvas"
-    - command: "npm install -g @openhands/agent-canvas"
+      description: "Ensure Node.js >=22.12 for Agent Canvas (present in sbx base images; else fetch the tar.gz)"
+    - command: 'bash -lc ''i=0; while [ $i -lt 3 ]; do i=$((i+1)); npm install -g --prefix /usr/local @openhands/agent-canvas --no-audit --no-fund --maxsockets 3 --fetch-retries 5 --fetch-retry-maxtimeout 120000 && exit 0; echo "npm attempt $i failed; retrying in 5s" >&2; sleep 5; done; echo "npm install failed after $i attempts" >&2; exit 1'''
       user: "0"
-      description: "Install OpenHands Agent Canvas (bin: agent-canvas) globally"
+      description: "Install OpenHands Agent Canvas (bin: agent-canvas) into /usr/local/bin; retries + low concurrency for the apply-time proxy"
     - command: "pip install --break-system-packages 'uv>=0.11.6'"
       user: "0"
       description: "Install uv (used to install the headless OpenHands runner on Python 3.12)"
@@ -75,18 +75,19 @@ agentInstructions:
 
     OpenHands' interactive CLI/TUI is deprecated in favour of **Agent Canvas**, a
     browser UI + backend server. This kit installs both surfaces, wired to OpenAI
-    through LiteLLM. The model is set in `LLM_MODEL` (default `openai/gpt-4o`);
-    the agent reads `LLM_MODEL` / `LLM_API_KEY` from the environment on startup.
+    through LiteLLM. The model is set in `LLM_MODEL` (default `openai/gpt-4o`).
 
     **Agent Canvas (primary, interactive)** — installed on PATH as
-    `agent-canvas` (via `npm i -g @openhands/agent-canvas`). Start the server and
-    open it in a browser:
+    `agent-canvas` (via `npm i -g @openhands/agent-canvas`). Launch it with the
+    runbook, which also seeds the model:
 
-        agent-canvas                     # serves http://localhost:8000
+        bash ~/runbooks/canvas.sh        # serves http://localhost:8000
 
-    Port 8000 must be forwarded to the host — start the sandbox with
-    `sbx run -p 8000 …` (or add a forward), then open http://localhost:8000. A
-    launcher lives at `~/runbooks/canvas.sh`.
+    Agent Canvas does NOT read the `LLM_*` env vars (its LLM config lives in the
+    web UI). `canvas.sh` works around this: after the backend is healthy it seeds
+    `LLM_MODEL` / `LLM_API_KEY` into Canvas via its local settings API, so the UI
+    opens preconfigured. Port 8000 must be forwarded to the host — start the
+    sandbox with `sbx run -p 8000 …`, then open http://localhost:8000.
 
     **Headless runner (automation / verification)** — the still-supported
     `openhands` binary (via `uv tool install openhands`). It ignores the `LLM_*`

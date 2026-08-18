@@ -56,8 +56,9 @@ It also ships `~/runbooks/canvas.sh` (launch Canvas) and `~/runbooks/smoke.sh`
 (headless end-to-end check).
 
 **Agent Canvas (primary):** start it with `bash ~/runbooks/canvas.sh` and open
-http://localhost:8000 (forward the port with `sbx run -p 8000 …`). The model is
-preconfigured from `LLM_MODEL`.
+http://localhost:8000 (forward the port with `sbx run -p 8000 …`). Agent Canvas
+doesn't read the `LLM_*` env vars, so `canvas.sh` seeds the model into its
+settings API after startup — the UI opens preconfigured.
 
 **Headless (automation):** run `openhands` with `--override-with-envs` — it
 ignores the `LLM_*` env vars otherwise:

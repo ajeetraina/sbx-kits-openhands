@@ -22,9 +22,17 @@ PORT=3000 bash ~/runbooks/canvas.sh
 
 The server is long-running (Ctrl-C to stop). Port 8000 must be forwarded to the
 host: start the sandbox with `sbx run -p 8000 …`, then open
-http://localhost:8000. The kit's `LLM_MODEL` / `LLM_API_KEY` are picked up on
-startup and the proxy injects the real key, so the model is preconfigured — you
-should not need to paste a key into **Settings > LLM**.
+http://localhost:8000.
+
+Agent Canvas does **not** read the `LLM_*` environment variables — its LLM
+config normally lives in the web UI. `canvas.sh` works around this: once the
+backend is healthy it seeds `LLM_MODEL` / `LLM_API_KEY` (and `LLM_BASE_URL` for
+DMR) into Canvas via its local settings API, so the model is preconfigured and
+you should not need to touch **Settings > LLM**. For cloud providers the key it
+stores is just the placeholder; the sbx proxy injects the real key on the wire.
+If the seed ever fails (e.g. the Canvas API changed), the script prints a hint
+to set the model manually — any placeholder API key works, since the proxy
+supplies the real one.
 
 ## smoke.sh
 

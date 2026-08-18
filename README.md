@@ -65,8 +65,10 @@ requests, so it never enters the microVM, shell history, or `ps`.
 
 > **Agent Canvas needs port 8000 forwarded.** Launch the sandbox with
 > `sbx run -p 8000 …` so the browser UI is reachable at http://localhost:8000.
-> The kit's `LLM_MODEL` / `LLM_API_KEY` are picked up on startup, so the model is
-> preconfigured — you should not need to paste a key into **Settings > LLM**.
+> Agent Canvas doesn't read the `LLM_*` env vars, so start it via
+> `~/runbooks/canvas.sh` — that launcher seeds the model into Canvas' settings
+> API after startup, so the UI opens preconfigured and you shouldn't need to
+> touch **Settings > LLM**.
 
 > **The headless runner ignores `LLM_*` unless you pass `--override-with-envs`.**
 > The `smoke.sh` runbook does this for you. This is an OpenHands design choice,
@@ -207,7 +209,9 @@ bash ~/runbooks/canvas.sh          # serves http://localhost:8000
 ```
 
 Confirm the default local backend shows as **connected**, then start a
-conversation. The model is preconfigured from `LLM_MODEL`.
+conversation. `canvas.sh` seeds the model (`LLM_MODEL`) into Canvas' settings
+after startup — Agent Canvas itself doesn't read the `LLM_*` env vars — so you
+shouldn't need to configure **Settings > LLM** by hand.
 
 **Headless (automation / CI)** — the still-supported `openhands` runner
 (remember `--override-with-envs`):
