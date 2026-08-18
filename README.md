@@ -34,6 +34,9 @@ sbx run -p 8000 --kit ./kits/anthropic claude
 # 4a. Inside the sandbox: start Agent Canvas, then open http://localhost:8000
 bash ~/runbooks/canvas.sh
 
+<img width="1690" height="989" alt="image" src="https://github.com/user-attachments/assets/240da87b-aca0-4320-b680-c331c2ac770c" />
+
+
 # 4b. Or prove it end-to-end without a browser (headless one-shot)
 bash ~/runbooks/smoke.sh
 ```
