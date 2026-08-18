@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       sbx_release:
-        description: "docker/sbx-releases tag to install"
+        description: "docker/sbx-releases tag to install (must support schemaVersion 2 kits)"
         required: true
-        default: "v0.32.0"
+        default: "v0.39.0-rc5"
       tag:
         description: "OCI tag to publish for the default (anthropic) kit"
         required: false
@@ -32,12 +32,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y /tmp/docker-sandboxes.deb
           sbx version
+          # sbx login (below) stores its account profile via the daemon, so it
+          # must be running. --detach keeps it from blocking the step.
+          sbx daemon start --detach
+          for _ in $(seq 1 30); do
+            sbx daemon status 2>/dev/null | grep -q 'running' && break
+            sleep 1
+          done
+          sbx daemon status
 
       - name: Log in to Docker Hub
+        # Populates the Docker credential store — used for the kit's OCI layer
+        # push (`sbx kit push` reads the Docker credential store).
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Authenticate sbx to Docker Hub
+        # `sbx kit push` also writes an OCI provenance blob, which is
+        # authenticated via sbx's OWN account profile (from `sbx login`), NOT the
+        # Docker credential store. Without this the layer push succeeds but the
+        # provenance push fails with "no default account profile set" (the first
+        # tag may get partway, later tags hard-fail).
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: printf '%s' "$DOCKERHUB_TOKEN" | sbx login --username "$DOCKERHUB_USERNAME" --password-stdin
 
       - name: Publish kit artifact
         env:
@@ -46,11 +67,13 @@ jobs:
         run: bash ./scripts/push-kits.sh
 
       - name: Sync Docker Hub overview page
-        # Cosmetic: updates the Hub repo's overview README. Kept non-fatal so a
-        # DOCKERHUB_TOKEN whose scope doesn't include this repo (Docker Hub
-        # returns 404, not 403) can't fail a run whose kit push already
-        # succeeded. To make it actually update, use a PAT scoped to
+        # Cosmetic: updates the Hub repo's overview README from DOCKERHUB.md.
+        # `if: always()` decouples it from the kit push so the page still syncs
+        # even if a push flakes; `continue-on-error` keeps a DOCKERHUB_TOKEN
+        # whose scope doesn't include this repo (Docker Hub returns 404, not 403)
+        # from failing the run. To make it actually update, use a PAT scoped to
         # <namespace>/sbx-openhands-kits with read/write.
+        if: ${{ always() }}
         continue-on-error: true
         uses: peter-evans/dockerhub-description@v4
         with:
