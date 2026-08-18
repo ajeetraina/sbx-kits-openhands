@@ -1,12 +1,12 @@
 # Anthropic / Claude (default, recommended)
 
-Wires the OpenHands CLI to Anthropic Claude through LiteLLM. The API key is
-injected by the sbx proxy as the `x-api-key` header on the wire, so it never
-enters the sandbox.
+Wires OpenHands Agent Canvas (and the headless runner) to Anthropic Claude
+through LiteLLM. The API key is injected by the sbx proxy as the `x-api-key`
+header on the wire, so it never enters the sandbox.
 
 | | |
 |---|---|
-| CLI | `openhands` (OpenHands V1, installed via `uv tool install openhands`) |
+| Surfaces | `agent-canvas` (browser UI + backend, port 8000) + headless `openhands` |
 | LLM | Anthropic Claude (`api.anthropic.com`) |
 | `LLM_MODEL` | `anthropic/claude-opus-4-8` (swap for `anthropic/claude-sonnet-4-6` for a cheaper/faster loop) |
 | Credential | Anthropic API key via `sbx secret set anthropic` |
@@ -39,17 +39,22 @@ edit `LLM_MODEL` in a local clone (`kits/anthropic/spec.yaml`) or
 
 ```bash
 echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
-sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:latest claude   # :latest == :anthropic
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest claude   # :latest == :anthropic
 # or from a local clone:
-sbx run --kit ./kits/anthropic claude
+sbx run -p 8000 --kit ./kits/anthropic claude
 ```
+
+`-p 8000` forwards Agent Canvas to the host.
 
 ## What the kit contains
 
-- Installs `uv` (pip) and then the OpenHands V1 CLI (`uv tool install openhands
-  --python 3.12`) onto `~/.local/bin`, which the kit adds to `PATH`.
+- Installs Node.js 22 + OpenHands Agent Canvas (`npm i -g
+  @openhands/agent-canvas`, bin: `agent-canvas`) and the headless OpenHands
+  runner (`uv tool install openhands --python 3.12`, bin: `openhands`) onto
+  `PATH`.
 - `permissions.network.allow` includes `api.anthropic.com` plus the install
-  hosts (pypi, GitHub for the uv-managed Python).
+  hosts (pypi, GitHub for the uv-managed Python, `nodejs.org`,
+  `registry.npmjs.org`, `ghcr.io`).
 - `api.anthropic.com` is a built-in sbx service. The kit's `credentials` block
   declares an `anthropic` service key injected as `x-api-key` on requests to
   that domain; the proxy attaches the real key (stored via
@@ -58,11 +63,11 @@ sbx run --kit ./kits/anthropic claude
 
 ## Verify (inside the sandbox)
 
-The CLI is installed:
+Both surfaces are installed:
 
 ```console
+!command -v agent-canvas && node --version
 !command -v openhands
-!openhands --help | head -20
 ```
 
 End-to-end (the single most useful check) — headless one-shot task:
@@ -71,6 +76,6 @@ End-to-end (the single most useful check) — headless one-shot task:
 !bash ~/runbooks/smoke.sh
 ```
 
-`--override-with-envs` is required and is passed by the runbook — OpenHands
-ignores the `LLM_*` env vars without it. For an interactive session, run
-`openhands --override-with-envs` in the sandbox shell.
+`--override-with-envs` is required for the headless runner and is passed by the
+runbook — it ignores the `LLM_*` env vars without it. For the interactive
+browser UI, run `bash ~/runbooks/canvas.sh` and open http://localhost:8000.

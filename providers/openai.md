@@ -1,12 +1,12 @@
 # OpenAI
 
-Wires the OpenHands CLI to OpenAI through LiteLLM. The API key is injected by the
-sbx proxy as an `Authorization: Bearer` header on the wire, so it never enters
-the sandbox.
+Wires OpenHands Agent Canvas (and the headless runner) to OpenAI through LiteLLM.
+The API key is injected by the sbx proxy as an `Authorization: Bearer` header on
+the wire, so it never enters the sandbox.
 
 | | |
 |---|---|
-| CLI | `openhands` (OpenHands V1, installed via `uv tool install openhands`) |
+| Surfaces | `agent-canvas` (browser UI + backend, port 8000) + headless `openhands` |
 | LLM | OpenAI (`api.openai.com`) |
 | `LLM_MODEL` | `openai/gpt-4o` (swap for any OpenAI chat model you have access to) |
 | Credential | OpenAI API key via `sbx secret set openai` |
@@ -39,16 +39,21 @@ the sandbox before running.
 
 ```bash
 echo "$OPENAI_API_KEY" | sbx secret set openai
-sbx run --kit docker.io/ajeetraina777/sbx-openhands-kits:openai claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:openai claude
 # or from a local clone:
-sbx run --kit ./kits/openai claude
+sbx run -p 8000 --kit ./kits/openai claude
 ```
+
+`-p 8000` forwards Agent Canvas to the host.
 
 ## What the kit contains
 
-- Installs `uv` (pip) and then the OpenHands V1 CLI (`uv tool install openhands
-  --python 3.12`) onto `~/.local/bin`, which the kit adds to `PATH`.
-- `permissions.network.allow` includes `api.openai.com` plus the install hosts.
+- Installs Node.js 22 + OpenHands Agent Canvas (`npm i -g
+  @openhands/agent-canvas`, bin: `agent-canvas`) and the headless OpenHands
+  runner (`uv tool install openhands --python 3.12`, bin: `openhands`) onto
+  `PATH`.
+- `permissions.network.allow` includes `api.openai.com` plus the install hosts
+  (pypi, GitHub, `nodejs.org`, `registry.npmjs.org`, `ghcr.io`).
 - `api.openai.com` is a built-in sbx service. The kit's `credentials` block
   declares an `openai` service key injected as a Bearer token on requests to
   that domain; the proxy attaches the real key (stored via
@@ -58,10 +63,10 @@ sbx run --kit ./kits/openai claude
 ## Verify (inside the sandbox)
 
 ```console
-!command -v openhands
+!command -v agent-canvas && node --version
 !bash ~/runbooks/smoke.sh
 ```
 
-`--override-with-envs` is required and is passed by the runbook — OpenHands
-ignores the `LLM_*` env vars without it. For an interactive session, run
-`openhands --override-with-envs`.
+`--override-with-envs` is required for the headless runner and is passed by the
+runbook — it ignores the `LLM_*` env vars without it. For the interactive
+browser UI, run `bash ~/runbooks/canvas.sh` and open http://localhost:8000.

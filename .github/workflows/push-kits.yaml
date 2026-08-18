@@ -58,4 +58,4 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: ${{ secrets.DOCKERHUB_USERNAME }}/sbx-openhands-kits
           readme-filepath: ./DOCKERHUB.md
-          short-description: "Docker Sandboxes mixin adding the OpenHands coding-agent CLI (anthropic, openai, dmr)"
+          short-description: "Docker Sandboxes mixin adding OpenHands Agent Canvas + headless runner (anthropic, openai, dmr)"
