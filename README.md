@@ -17,6 +17,16 @@ a Canvas launcher ship alongside.
 OpenAI or to a local [Docker Model Runner](https://docs.docker.com/ai/model-runner/).
 See [providers/](./providers/) for copy-paste config.
 
+## Architecture
+
+![OpenHands sbx kit architecture](./assets/architecture.png)
+
+The kit runs inside an sbx microVM sandbox. Your `LLM_API_KEY` stays
+**proxy-managed** and never enters the sandbox — the **sbx proxy** swaps in the
+real key at the network boundary, and an egress **allow-list** limits build-time
+traffic (PyPI · npm · Node). The **Agent Canvas** UI is reached from the host
+browser via the `-p 8000` port-forward.
+
 ## Quickstart (Anthropic)
 
 ```bash
