@@ -2,7 +2,7 @@
 
 A standalone [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) kit
 (`kind: mixin`) that installs [OpenHands](https://github.com/OpenHands/OpenHands)
-**Agent Canvas** — the browser UI + backend server (`agent-canvas`, port 8000)
+**Agent Canvas** ~ the browser UI + backend server (`agent-canvas`, port 8000)
 that replaced the now-deprecated interactive CLI plus the still-supported
 **headless** `openhands` runner, and wires both to an LLM through
 [LiteLLM](https://github.com/BerriAI/litellm). A one-shot smoke-test runbook and
