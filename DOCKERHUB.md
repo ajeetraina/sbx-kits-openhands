@@ -29,17 +29,17 @@ Anthropic default. `anthropic` is a built-in sbx service — store an API key
 once, then launch with port 8000 forwarded for Agent Canvas:
 
     echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
-    sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest claude
+    sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest shell
 
 OpenAI:
 
     echo "$OPENAI_API_KEY" | sbx secret set openai
-    sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:openai claude
+    sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:openai shell
 
 Local Docker Model Runner (pull a model on the host first):
 
     docker model pull ai/qwen2.5-coder
-    sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:dmr claude
+    sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:dmr shell
 
 No tag holds a key. The sbx proxy injects it from the stored secret, so the key
 never enters the sandbox. `sbx run` has no `-e` flag by design.

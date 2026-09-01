@@ -39,7 +39,7 @@ echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
 # 3. Launch the kit — forward port 8000 for Agent Canvas, run from a repo clone
 git clone https://github.com/ajeetraina/sbx-kits-openhands.git
 cd sbx-kits-openhands
-sbx run -p 8000 --kit ./kits/anthropic claude
+sbx run -p 8000 --kit ./kits/anthropic shell
 
 # 4a. Inside the sandbox: start Agent Canvas, then open http://localhost:8000
 bash ~/runbooks/canvas.sh
@@ -141,44 +141,46 @@ setup. Forward port 8000 so Agent Canvas is reachable.
 
 ```console
 # Anthropic / Claude (default, recommended) — :latest == :anthropic
-sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest shell
 
 # OpenAI
-sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:openai claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:openai shell
 
 # Local Docker Model Runner (no cloud key)
-sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:dmr claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:dmr shell
 ```
 
 Or straight from this repo over git (uses the default anthropic provider):
 
 ```console
-sbx run -p 8000 --kit "git+https://github.com/ajeetraina/sbx-kits-openhands.git" claude
+sbx run -p 8000 --kit "git+https://github.com/ajeetraina/sbx-kits-openhands.git" shell
 ```
 
 Or from a local clone (the default kit lives at the repo root):
 
 ```console
 git clone https://github.com/ajeetraina/sbx-kits-openhands.git
-sbx run -p 8000 --kit ./sbx-kits-openhands/ claude
+sbx run -p 8000 --kit ./sbx-kits-openhands/ shell
 ```
 
-#### Choosing the agent
+#### Why the `shell` agent
 
-The trailing argument (`claude` above) is the **coding agent** that runs the
-sandbox session — a separate axis from OpenHands, which the kit installs. The
-tag decides which LLM OpenHands drives; the trailing agent decides which
-assistant you interact with in the sandbox shell. `sbx run --help` lists them:
+The trailing argument (`shell` above) is the **base agent** that supplies the
+sandbox container. OpenHands is provider-agnostic and runs as its own process
+inside that container — it uses your LLM purely over the provider API, so it
+does not need a coding agent (like Claude Code) in the loop. The kit therefore
+pins the neutral **`shell`** base (`docker/sandbox-templates:shell-docker`) via
+`requires.agent: shell`:
 
-```
-claude, claude-bedrock, codex, copilot, cursor, docker-agent, droid, gemini, kiro, opencode, shell
-```
+- No Claude Code image is pulled — the container is a plain shell.
+- `shell` already declares the built-in provider credentials (`anthropic`,
+  `openai`, …), so it injects your stored key (`sbx secret set …`) onto the
+  right header for the provider host. The kit declares **no** credential of its
+  own, which is what avoids the "credential … defined in both … and openhands"
+  compose error.
 
-`shell` is a good choice if you only want to drive OpenHands directly:
-
-```console
-sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest shell
-```
+Because the kit pins `shell`, composing it onto a different agent fails fast at
+create time rather than silently mis-authenticating.
 
 ### 4. Confirm the kit installed correctly
 

@@ -39,9 +39,9 @@ the sandbox before running.
 
 ```bash
 echo "$OPENAI_API_KEY" | sbx secret set openai
-sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:openai claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:openai shell
 # or from a local clone:
-sbx run -p 8000 --kit ./kits/openai claude
+sbx run -p 8000 --kit ./kits/openai shell
 ```
 
 `-p 8000` forwards Agent Canvas to the host.

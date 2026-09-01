@@ -5,14 +5,15 @@ displayName: OpenHands Agent Canvas (Anthropic / Claude)
 description: "Installs OpenHands Agent Canvas — the browser UI + backend server (`agent-canvas`, port 8000) that replaced the deprecated interactive CLI — plus the still-supported headless `openhands` runner, wired to Anthropic Claude via LiteLLM. The kit holds no key: Anthropic is a built-in sbx service, so store your key once with `sbx secret set anthropic` and the proxy injects it as the x-api-key header on requests to api.anthropic.com. Forward port 8000 (`sbx run -p 8000 …`) and open http://localhost:8000, or run the headless smoke test."
 sourceURL: https://github.com/ajeetraina/sbx-kits-openhands
 
-# OpenHands reaches Claude over the Anthropic API, so this variant is designed
-# for the `claude` base agent, which already owns the built-in `anthropic`
-# credential and injects the stored key (`sbx secret set anthropic`) as the
-# `x-api-key` header on requests to api.anthropic.com. requires.agent makes that
-# pairing explicit: composing onto a non-anthropic agent fails fast at create
-# time instead of silently sending the placeholder key and 401-ing at runtime.
+# OpenHands is provider-agnostic and reaches Claude purely as an LLM over the
+# Anthropic API, so this kit runs on the neutral `shell` base agent
+# (docker/sandbox-templates:shell-docker) — NOT the Claude Code image. `shell`
+# already owns the built-in `anthropic` credential and injects the stored key
+# (`sbx secret set anthropic`) as the `x-api-key` header on api.anthropic.com —
+# exactly what OpenHands/LiteLLM sends. requires.agent pins the base agent so it
+# fails fast if composed onto a different one.
 requires:
-  agent: claude
+  agent: shell
 
 permissions:
   network:
@@ -29,10 +30,10 @@ permissions:
       - pkg-containers.githubusercontent.com   # ghcr blob storage
       - api.anthropic.com               # Claude, reached by OpenHands via LiteLLM
 
-# api.anthropic.com is a BUILT-IN sbx service that the `claude` base agent
+# api.anthropic.com is a BUILT-IN sbx service that the `shell` base agent
 # already declares as a credential. This kit does NOT re-declare it: two kits
 # (the agent + this mixin) declaring `service: anthropic` collide at compose
-# time — "credential for service anthropic defined in both claude and openhands"
+# time — "credential for service anthropic defined in both shell and openhands"
 # — which is a hard 400 at `sbx run`. Instead we rely on the agent's injection:
 # store your key once with `sbx secret set anthropic` and the proxy swaps it
 # onto the `x-api-key` header for api.anthropic.com. OpenHands sends

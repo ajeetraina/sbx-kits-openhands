@@ -5,6 +5,16 @@ displayName: OpenHands Agent Canvas (OpenAI)
 description: "Installs OpenHands Agent Canvas — the browser UI + backend server (`agent-canvas`, port 8000) that replaced the deprecated interactive CLI — plus the still-supported headless `openhands` runner, wired to OpenAI via LiteLLM. The kit holds no key: OpenAI is a built-in sbx service, so store your key once with `sbx secret set openai` and the proxy injects it as a Bearer token on requests to api.openai.com. Forward port 8000 (`sbx run -p 8000 …`) and open http://localhost:8000, or run the headless smoke test."
 sourceURL: https://github.com/ajeetraina/sbx-kits-openhands
 
+# OpenHands is provider-agnostic and reaches OpenAI purely as an LLM over its
+# API, so this kit runs on the neutral `shell` base agent
+# (docker/sandbox-templates:shell-docker) — NOT the Claude Code image. `shell`
+# already owns the built-in `openai` credential and injects the stored key
+# (`sbx secret set openai`) as `Authorization: Bearer` on api.openai.com —
+# exactly what OpenHands/LiteLLM sends. requires.agent pins the base agent so it
+# fails fast if composed onto a different one.
+requires:
+  agent: shell
+
 permissions:
   network:
     allow:
@@ -20,23 +30,15 @@ permissions:
       - pkg-containers.githubusercontent.com   # ghcr blob storage
       - api.openai.com                  # OpenAI, reached by OpenHands via LiteLLM
 
-# api.openai.com is a BUILT-IN sbx service. Store your key once with
-# `sbx secret set openai` (or `sbx secret set openai --oauth`) and the proxy
-# injects `Authorization: Bearer <key>` on requests to api.openai.com — no
-# per-kit custom secret needed. v2 requires this injection to be declared
-# explicitly (it is no longer inferred from the allow-list), hence the
-# credentials block below. OpenHands sends `Authorization: Bearer
-# <LLM_API_KEY>`; the proxy overwrites that header with the real key on the
-# wire, so LLM_API_KEY stays a placeholder and never holds a real secret.
-credentials:
-  - service: openai
-    description: "OpenAI API key for OpenHands (via LiteLLM)"
-    apiKey:
-      name: LLM_API_KEY
-      proxyManaged: true
-      inject:
-        - domain: api.openai.com
-          scheme: bearer
+# api.openai.com is a BUILT-IN sbx service that the `shell` base agent already
+# declares as a credential. This kit does NOT re-declare it: two kits (the agent
+# + this mixin) declaring `service: openai` collide at compose time — "credential
+# for service openai defined in both shell and openhands" — a hard 400 at
+# `sbx run`. Instead we rely on the agent's injection: store your key once with
+# `sbx secret set openai` and the proxy swaps it onto `Authorization: Bearer` for
+# api.openai.com. OpenHands sends `Authorization: Bearer <LLM_API_KEY>` (a
+# placeholder, below); the proxy overwrites it on the wire, so no real secret
+# ever enters the sandbox.
 
 environment:
   variables:
