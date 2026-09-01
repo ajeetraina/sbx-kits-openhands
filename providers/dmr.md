@@ -26,9 +26,9 @@ Any DMR model works — set `LLM_MODEL` to `openai/<model-name>` to match.
 ## 2. Run
 
 ```bash
-sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:dmr claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:dmr shell
 # or from a local clone:
-sbx run -p 8000 --kit ./kits/dmr claude
+sbx run -p 8000 --kit ./kits/dmr shell
 ```
 
 `-p 8000` forwards Agent Canvas to the host. No `sbx secret` step — DMR needs no
