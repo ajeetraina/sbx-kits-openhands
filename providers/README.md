@@ -57,8 +57,8 @@ cloud provider, and run it with port 8000 forwarded for Agent Canvas:
 
 ```bash
 echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
-sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:anthropic claude
-# or from this repo: sbx run -p 8000 --kit ./kits/anthropic claude
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:anthropic shell
+# or from this repo: sbx run -p 8000 --kit ./kits/anthropic shell
 ```
 
 See each provider's page for the exact `LLM_MODEL`, run command, and setup notes.

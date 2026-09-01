@@ -5,6 +5,14 @@ displayName: OpenHands Agent Canvas (Docker Model Runner)
 description: "Installs OpenHands Agent Canvas — the browser UI + backend server (`agent-canvas`, port 8000) that replaced the deprecated interactive CLI — plus the still-supported headless `openhands` runner, wired to a local Docker Model Runner over host.docker.internal:12434 — no cloud key, no external LLM. Pull a coding model on the host first (e.g. `docker model pull ai/qwen2.5-coder`). Forward port 8000 (`sbx run -p 8000 …`) and open http://localhost:8000, or run the headless smoke test."
 sourceURL: https://github.com/ajeetraina/sbx-kits-openhands
 
+# OpenHands is provider-agnostic and talks to a local Docker Model Runner (no
+# cloud key), so this kit runs on the neutral `shell` base agent
+# (docker/sandbox-templates:shell-docker) — NOT the Claude Code image. No cloud
+# credential is declared: DMR needs none. requires.agent pins the base agent for
+# a predictable, minimal container.
+requires:
+  agent: shell
+
 permissions:
   network:
     allow:

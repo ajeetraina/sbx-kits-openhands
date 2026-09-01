@@ -39,9 +39,9 @@ edit `LLM_MODEL` in a local clone (`kits/anthropic/spec.yaml`) or
 
 ```bash
 echo "$ANTHROPIC_API_KEY" | sbx secret set anthropic
-sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest claude   # :latest == :anthropic
+sbx run -p 8000 --kit docker.io/ajeetraina777/sbx-openhands-kits:latest shell   # :latest == :anthropic
 # or from a local clone:
-sbx run -p 8000 --kit ./kits/anthropic claude
+sbx run -p 8000 --kit ./kits/anthropic shell
 ```
 
 `-p 8000` forwards Agent Canvas to the host.
