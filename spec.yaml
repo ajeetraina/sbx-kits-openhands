@@ -96,6 +96,9 @@ setup:
     - command: 'i=0; while [ $i -lt 3 ]; do i=$((i+1)); npm install -g --prefix /usr/local @openhands/agent-canvas --no-audit --no-fund --maxsockets 3 --fetch-retries 5 --fetch-retry-maxtimeout 120000 && exit 0; echo "npm attempt $i failed; retrying in 5s" >&2; sleep 5; done; echo "npm install failed after $i attempts" >&2; exit 1'
       user: "0"
       description: "Install OpenHands Agent Canvas (bin: agent-canvas) into /usr/local/bin; retries for the apply-time proxy"
+    - command: 'if [ ! -e /usr/local/bin/uvx ]; then ln -s "$(command -v uv || echo /usr/local/bin/uv)" /usr/local/bin/uvx; fi'
+      user: "0"
+      description: "Ensure uvx exists — shell-docker ships uv without the uvx alias that Agent Canvas needs to launch agent-server"
     - command: "uv tool install openhands"
       user: "1000"
       description: "Install the headless OpenHands runner (for automation / verification)"
