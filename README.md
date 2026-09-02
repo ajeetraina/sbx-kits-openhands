@@ -2,7 +2,7 @@
 
 A [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) **`kind: sandbox`**
 kit that boots straight into [OpenHands](https://github.com/OpenHands/OpenHands)
-**Agent Canvas** — the browser UI + agent-server — on port 8000.
+**Agent Canvas**  the browser UI + agent-server on port 8000.
 
 It's a self-contained agent: it owns its image, entrypoint, and credentials, so
 there's no base-agent coupling and no credential collision. One spec supports
