@@ -53,6 +53,15 @@ and the matching `sbx secret set <anthropic|openai|google>`.
 > **Port 8000 must be forwarded.** Launch with `sbx run -p 8000 …` so the UI is
 > reachable at http://localhost:8000.
 
+Already launched without `-p 8000`? Forward it after the fact (the ingress on
+port 8000 binds to all interfaces, so no restart is needed). Use the sandbox
+name from `sbx ls`:
+
+```bash
+sbx ports openhands-sbx-kits-openhands --publish 8000:8000
+open http://localhost:8000
+```
+
 ## Providers
 
 | Model (`LLM_MODEL`) | Provider | Key |
